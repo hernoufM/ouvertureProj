@@ -99,8 +99,20 @@ let convert_tree_to_string tree =
 let l=liste_to_arbre (gen_permutation 9);;
 convert_tree_to_string (l);;
 
-type 'a abr_compresse =
-  | Empty
-  | Node of 'a * (('a abr_compresse) ref * int) * (('a abr_compresse) ref * int);;
+let liste_parantheses tree =
+  let rec aux tree res =
+    match tree with
+    | Empty -> []
+    | Node(val,ag,ad) ->  let rec appartient tree liste =
+                            match liste with
+                            | [] -> false
+                            | (x,stringX)::q -> if stringX=(convert_tree_to_string tree)
+                              then true
+                              else appartient tree q
+      in if (appartient tree !res) then aux ag res;
 
-(*'a c'est  le type qui est ((int*list int) list)*)
+type valeurABRC = (int* int list) list;;
+
+type ABRC =
+  | EmptyABRC
+  | NodeABRC of valeurABRC * (ABRC ref * int) * (ABRC ref * int);;
