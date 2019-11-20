@@ -99,3 +99,8 @@ let convert_tree_to_string tree =
 let l=liste_to_arbre (gen_permutation 9);;
 convert_tree_to_string (l);;
 
+type 'a abr_compresse =
+  | Empty
+  | Node of 'a * (('a abr_compresse) ref * int) * (('a abr_compresse) ref * int);;
+
+(*'a c'est  le type qui est ((int*list int) list)*)
