@@ -126,5 +126,7 @@ let liste_to_arbre_comp l =
 
 let arbre_random = liste_to_arbre_comp (gen_permutation 5);;
 
+(* comment to test git*)
+
 
 (*'a c'est  le type qui est ((int*list int) list)*)
