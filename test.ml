@@ -100,7 +100,31 @@ let l=liste_to_arbre (gen_permutation 9);;
 convert_tree_to_string (l);;
 
 type 'a abr_compresse =
-  | Empty
-  | Node of 'a * (('a abr_compresse) ref * int) * (('a abr_compresse) ref * int);;
+    | Empty
+    | Node of 'a * (('a abr_compresse) ref * int) * (('a abr_compresse) ref * int);;
+
+let rec insert tree a =
+  match tree with
+    | Empty  -> Node (a,((ref Empty),0),((ref Empty),0))
+    | Node(v,(refL,etL),(refR,etR))  ->
+        if (a<v) 
+        then Node (v,(ref (insert !refL a),etL),(refR,etR))
+        else Node (v,(refL,etL),(ref (insert !refR a) ,etR));;
+
+
+let tree1 = Empty;;
+let tree2 = insert tree1 2;;
+let tree3 = insert tree2 1;;
+let tree4 = insert tree3 3;;
+
+let liste_to_arbre_comp l =
+  let rec aux l tree=
+    match l with
+      | [] -> tree
+      | x::q -> aux q (insert tree x)
+  in aux l Empty;;
+
+let arbre_random = liste_to_arbre_comp (gen_permutation 5);;
+
 
 (*'a c'est  le type qui est ((int*list int) list)*)
