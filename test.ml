@@ -124,9 +124,56 @@ let liste_to_arbre_comp l =
       | x::q -> aux q (insert tree x)
   in aux l Empty;;
 
+
+
 let arbre_random = liste_to_arbre_comp (gen_permutation 5);;
 
-(* comment to test git*)
+
+let treecomp_to_string tree =
+  let rec aux tree res =
+    match tree with
+      |Empty -> res
+      |Node(r,(left,_),(right,_)) ->
+          "("^(aux !left  "")^")"^(aux !right "")
+  in aux tree "";;
+
+treecomp_to_string  arbre_random ;;
+
+
+
+let rec list_of_parentesis_trees tcomp = 
+  let str t= treecomp_to_string !t 
+  in
+    match tcomp with
+      |Empty -> []
+      |Node(_,({contents = Empty},_),({contents = Empty},_))->[]
+      |Node(r,(left,_),(right,_)) ->
+          if  (str left) !="" && (str right)!=""  then
+            (left,str left)::list_of_parentesis_trees !left
+            @
+            (right,str right)::list_of_parentesis_trees !right else [] ;;
+
+let arbre_example = liste_to_arbre_comp ([4;8;2;1;3;6;9;5;7]);;
+
+let list_parentesis_refs= list_of_parentesis_trees arbre_example;;
+
+let rec suffix arb=
+  match arb with 
+    |Empty -> []
+    |Node(a,({contents = Empty},_),({contents = Empty},_))->[a]
+    |Node(v,(left,_),(right,_)) ->suffix(!left) @suffix(!right)@[v]   ;;
+
+suffix arbre_example;;
+
+
+
+
+
+match arb wit
+
+
+
+
 
 
 (*'a c'est  le type qui est ((int*list int) list)*)
