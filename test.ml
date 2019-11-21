@@ -99,7 +99,7 @@ let convert_tree_to_string tree =
 let l=liste_to_arbre (gen_permutation 9);;
 convert_tree_to_string (l);;
 
-let liste_parantheses tree =
+let listes_construction tree =
   let res1 = ref [] and res2 = ref [] in
   let rec aux tree res1 res2 =
     match tree with
@@ -111,33 +111,92 @@ let liste_parantheses tree =
                             then true
                             else appartient tree q
       in (if not (appartient tree !res1) then res1:= (List.append !res1 [(v, (convert_tree_to_string tree))])
-      else
-        let rec racine_eq tree liste =
-             match liste with
-             | [] -> -1
-             | (x,stringX)::q -> if stringX=(convert_tree_to_string tree)
-               then x
-               else racine_eq tree q
-         in res2:= (List.append !res2 [(v,racine_eq tree !res1)]));
+          else
+            let rec racine_eq tree liste =
+              match liste with
+              | [] -> -1
+              | (x,stringX)::q -> if stringX=(convert_tree_to_string tree)
+                then x
+                else racine_eq tree q
+            in res2:= (List.append !res2 [(v,racine_eq tree !res1)]));
       (if not (ag = Empty) then let (a,b) = aux ag res1 res2 in res1:=a; res2:=b);
       (if not (ad = Empty) then let (a,b) = aux ad res1 res2 in res1:=a; res2:=b);
       (!res1,!res2);
-        in
-        aux tree res1 res2;;
+  in
+  aux tree res1 res2;;
 
-let v = [4;2;1;3;8;6;5;7;9] in
-liste_parantheses (liste_to_arbre v);;
+let v = [4;2;1;3;8;6;5;7;9];;
+listes_construction (liste_to_arbre v);;
 
-type valeurABRC = (int* int list) list;;
+type valeurABRC_listes = (int* int list) list;;
 
-type abrc =
+type abrc_listes =
   | EmptyABRC
-  | NodeABRC of valeurABRC * (abrc ref * int) * (abrc ref * int);;
+  | NodeABRC of valeurABRC_listes * (abrc_listes ref * int) * (abrc_listes ref * int);;
 
 let rec insert tree a =
   match tree with
-  | EmptyABRC  -> NodeABRC (a,((ref EmptyABRC),0),((ref EmptyABRC),0))
+  | EmptyABRC  -> NodeABRC ([(a,[])],((ref EmptyABRC),0),((ref EmptyABRC),0))
   | NodeABRC(v,(refL,etL),(refR,etR))  ->
-    if (a<v)
+    if (a< fst(List.hd(v)))
     then NodeABRC (v,(ref (insert !refL a),etL),(refR,etR))
     else NodeABRC (v,(refL,etL),(ref (insert !refR a) ,etR));;
+
+let liste_to_abrc l =
+  let rec insert_liste tree l =
+    match l with
+    | [] -> tree
+    | x::q -> insert_liste (insert tree x) q
+  in insert_liste EmptyABRC l;;
+
+let rec ref_node_abrc abrc v =
+  match abrc with
+  | EmptyABRC -> raise Not_found
+  | NodeABRC(x,(refL,etL),(refR,etR)) ->
+    if (v< fst(List.hd(x))) then ref_node_abrc !refL v
+    else if (v> fst(List.hd(x))) then ref_node_abrc !refR v
+    else ref abrc;;
+
+let liste_refs l abrc = List.map (ref_node_abrc abrc) l;;
+
+let rec supperier_all v l =
+  match l with
+  | [] -> true
+  | x::q -> if(fst x< fst v) then supperier_all v q else false;;
+
+
+  let rec inferier_all v l =
+    match l with
+    | [] -> true
+    | x::q -> if(fst x> fst v) then true else false;;
+
+let rec insert_ordered_list v l =
+  match l with
+  | [] -> [v]
+  | x::q -> if(fst x< fst v) then insert_ordered_list v q else  v::x::q
+
+(*Я не закончил еще...*)
+let insert_abrc_etiq v reference abrc =
+  let listeEtiq = ref [] and refArbre = ref abrc and fin = ref false in
+  if !refArbre = EmptyABRC then refArbre:= insert !refArbre v; fin:=true;
+  while not !fin do
+    match !refArbre with
+    | EmptyABRC -> fin:=true
+    | NodeABRC() ->
+  done
+
+
+let liste_to_abrc_etiq l abrc =
+  let
+
+  let etiq = ref 0;;
+let gen_etiq () = etiq:=!etiq+1; !etiq;;
+let relancer_gen() = etiq:=0;;
+
+(*Я не закончил еще...*)
+let compresse_abr_listes abr =
+  let (listeConstr1, listeConstr2) = listes_construction abr
+  in
+  let abrc = liste_to_abrc (List.map fst listeConstr1)
+  in
+  let list_references = List.combine (List.map fst listeConstr2) (liste_refs List.map(snd listeConstr2) abrc);;
