@@ -1,4 +1,5 @@
 
+
 (************************ Question 1.1 ************************)
 
 (* to generate a random number between 1 and the length of the list *)
@@ -153,11 +154,15 @@ let rec ref_node_abrc abrc v =
   match abrc with
   | EmptyABRC -> raise Not_found
   | NodeABRC(x,(refL,etL),(refR,etR)) ->
-    if (v< fst(List.hd(x))) then ref_node_abrc !refL v
-    else if (v> fst(List.hd(x))) then ref_node_abrc !refR v
-    else ref abrc;;
+    if (v< fst(List.hd(x))) then (match !refL with
+    | EmptyABRC -> raise Not_found
+    | NodeABRC(fils,_,_) -> if (fst (List.hd fils)) = v then refL else ref_node_abrc !refL v)
+    else (match !refR with
+    | EmptyABRC -> raise Not_found
+    | NodeABRC(fils,_,_) -> if (fst (List.hd fils)) = v then refR else ref_node_abrc !refR v);;
 
 let liste_refs l abrc = List.map (ref_node_abrc abrc) l;;
+
 
 let rec supperier_all v l =
   match l with
@@ -165,38 +170,76 @@ let rec supperier_all v l =
   | x::q -> if(fst x< fst v) then supperier_all v q else false;;
 
 
-  let rec inferier_all v l =
-    match l with
-    | [] -> true
-    | x::q -> if(fst x> fst v) then true else false;;
+let rec inferier_all v l =
+  match l with
+  | [] -> true
+  | x::q -> if(fst x> fst v) then true else false;;
 
 let rec insert_ordered_list v l =
   match l with
   | [] -> [v]
-  | x::q -> if(fst x< fst v) then insert_ordered_list v q else  v::x::q
+  | x::q -> if(fst x< fst v) then x::(insert_ordered_list v q) else  v::x::q
 
-(*Я не закончил еще...*)
-let insert_abrc_etiq v reference abrc =
-  let listeEtiq = ref [] and refArbre = ref abrc and fin = ref false in
-  if !refArbre = EmptyABRC then refArbre:= insert !refArbre v; fin:=true;
-  while not !fin do
-    match !refArbre with
-    | EmptyABRC -> fin:=true
-    | NodeABRC() ->
-  done
-
-
-let liste_to_abrc_etiq l abrc =
-  let
-
-  let etiq = ref 0;;
+let etiq = ref 0;;
 let gen_etiq () = etiq:=!etiq+1; !etiq;;
 let relancer_gen() = etiq:=0;;
 
-(*Я не закончил еще...*)
+let get_value_etiq abrc liste_etiq =
+  match abrc with
+  | EmptyABRC -> raise Not_found
+  |  NodeABRC(x,(refL,etL),(refR,etR))->
+    let rec aux l =
+match l with
+| [] -> -1
+| x::q -> let rec liste_egaux l1 l2 = match l1,l2 with
+    | ([],[]) -> true
+    | ([],x::q) -> false
+    | (x::q,[]) -> false
+    | (x1::q1, x2::q2) -> if (x1=x2) then liste_egaux q1 q2 else false
+  in if (liste_egaux (snd x) liste_etiq) then fst x else aux q
+in aux x;;
+
+
+let insert_abrc_etiq v reference abrc =
+  if abrc = EmptyABRC then insert abrc v
+  else
+    let rec aux abrc listEtiq=
+      print_int(v); print_endline("---");
+      match abrc with
+      | EmptyABRC -> print_endline("Empty");raise Not_found
+      | NodeABRC(x,(refL,etL),(refR,etR)) ->
+        print_endline("Node "^(string_of_int (fst (List.hd  x)))^"--");
+        let valeur = get_value_etiq abrc listEtiq in
+        if(valeur>=0) then
+          (if(valeur>v) then
+            ((print_endline("valeur>v");
+            let etL = if(!refL=EmptyABRC) then gen_etiq() else etL and
+                refL=if(!refL=EmptyABRC) then reference else refL in
+            refL:=(aux !refL (if etL =0 then listEtiq else List.append listEtiq [etL]));
+            NodeABRC(x, (refL, etL),(refR, etR))))
+          else
+            (print_endline("valeur<v");
+             let etR = if(!refR=EmptyABRC) then gen_etiq() else etR and
+               refR=if(!refR=EmptyABRC) then reference else refR in
+           refR:=(aux !refR (if etR =0 then listEtiq else List.append listEtiq [etR]));
+            NodeABRC(x, (refL, etL), (refR, etR))))
+        else
+          (print_endline("valeur<0");
+           NodeABRC (insert_ordered_list (v,listEtiq) x, (refL,etL),(refR,etR)))
+    in aux abrc [];;
+
+let liste_to_abrc_etiq l abrc =
+  let rec aux l abrc=
+    match l with
+    | [] -> abrc
+    | x::q ->aux q (insert_abrc_etiq (fst x) (snd x) abrc)
+  in aux l abrc
+
 let compresse_abr_listes abr =
   let (listeConstr1, listeConstr2) = listes_construction abr
   in
   let abrc = liste_to_abrc (List.map fst listeConstr1)
   in
-  let list_references = List.combine (List.map fst listeConstr2) (liste_refs List.map(snd listeConstr2) abrc);;
+  let list_references = List.combine (List.map fst listeConstr2) (liste_refs (List.map snd listeConstr2) abrc) in
+  let abrc2 =  liste_to_abrc_etiq list_references abrc in
+  abrc2;;
