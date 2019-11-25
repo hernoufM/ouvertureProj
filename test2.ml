@@ -1,3 +1,5 @@
+
+
 (************************ Question 1.1 ************************)
 
 (* to generate a random number between 1 and the length of the list *)
@@ -96,8 +98,6 @@ let convert_tree_to_string tree =
       "("^(aux left "")^")"^(aux right "")
   in aux tree "";;
 
-(********************** Question 2.5 ************************)
-
 (*Fonction qui prend ABR et retourne 2 listes (listeConstruction1, listeConstruction2):
   Premere liste contient les couples (valeur de racine d'ABR, expression paranthesé d'ABR).
   Deuxieme liste contient les couples (valeur de racine d'ABR, valuer de racine d'ABR ou on va inserer la premier valeur)
@@ -133,23 +133,42 @@ let listes_construction tree =
   in
   aux tree res1 res2;;
 
+module OrderedList =
+struct
+  type t = int list
+  let compare l1 l2 =
+    let rec aux l1 l2 =
+      match l1,l2 with
+      | [],[] -> 0
+      | x::q,[] -> 1
+      | [],x::q -> -1
+      | x::q,y::t -> if x=y then aux q t else (if x>y then 1 else -1)
+    in aux l1 l2;;
+end;;
+
+
+(********************** Question 2.7 ************************)
+
+module ListMap = Map.Make(OrderedList);;
+
 (*Contenu d'en noeud ABR compressé. On y stocke les valeurs et les etiquettes assossié*)
-type valeurABRC_listes = (int* int list) list;;
+type valeurABRC_maps = int ListMap.t;;
 
 (*Structure d'un noeud ABR compressé. On y stocke la contenu d'un noeud, ainsi que la reference et l'etiquete assossié
   à cette reference du fils gauche. Pareil pour le fils droit. Etiquete sont des entriers. Etiquette 0 correspond à une reference
   non etiquetté*)
-type abrc_listes =
+type abrc_maps =
   | EmptyABRC
-  | NodeABRC of valeurABRC_listes * (abrc_listes ref * int) * (abrc_listes ref * int);;
+  | NodeABRC of valeurABRC_maps * (abrc_maps ref * int) * (abrc_maps ref * int);;
 
+open ListMap;;
 (*Creation d'un noeud ABRC avec la valeur initial et references vers fils gauch et fils droit (qui sont EmptyABRC)
   ainsi que insertion de cette noeud dans bon endroit*)
 let rec insert tree a =
   match tree with
-  | EmptyABRC  -> NodeABRC ([(a,[])],((ref EmptyABRC),0),((ref EmptyABRC),0))
+  | EmptyABRC  -> NodeABRC (add [] a empty,((ref EmptyABRC),0),((ref EmptyABRC),0))
   | NodeABRC(v,(refL,etL),(refR,etR))  ->
-    if (a< fst(List.hd(v)))
+    if (a< (find [] v))
     then NodeABRC (v,(ref (insert !refL a),etL),(refR,etR))
     else NodeABRC (v,(refL,etL),(ref (insert !refR a) ,etR));;
 
@@ -166,22 +185,16 @@ let rec ref_node_abrc abrc v =
   match abrc with
   | EmptyABRC -> raise Not_found
   | NodeABRC(x,(refL,etL),(refR,etR)) ->
-    if (v< fst(List.hd(x))) then (match !refL with
+    if (v< (find [] x)) then (match !refL with
         | EmptyABRC -> raise Not_found
-        | NodeABRC(fils,_,_) -> if (fst (List.hd fils)) = v then refL else ref_node_abrc !refL v)
+        | NodeABRC(fils,_,_) -> if (find [] fils) = v then refL else ref_node_abrc !refL v)
     else (match !refR with
         | EmptyABRC -> raise Not_found
-        | NodeABRC(fils,_,_) -> if (fst (List.hd fils)) = v then refR else ref_node_abrc !refR v);;
+        | NodeABRC(fils,_,_) -> if (find [] fils) = v then refR else ref_node_abrc !refR v);;
 
 (* Fonction qui prend la liste des valeurs initiales des noeuds et ABRC comme argument et retourne
    la liste des references vers ces noueuds correspondants*)
 let liste_refs l abrc = List.map (ref_node_abrc abrc) l;;
-
-(*Insertion d'une couple (valeur, etiquetes associé) dans la liste ordonné selon la valeur*)
-let rec insert_ordered_list v l =
-  match l with
-  | [] -> [v]
-  | x::q -> if(fst x< fst v) then x::(insert_ordered_list v q) else  v::x::q
 
 let etiq = ref 0;;
 (*Generateur des etiquetes*)
@@ -189,24 +202,16 @@ let gen_etiq () = etiq:=!etiq+1; !etiq;;
 (*Fonction qui relance le generateur*)
 let relancer_gen() = etiq:=0;;
 
-(*Fonction qui verifie l'egualité de 2 listes*)
-let rec liste_egaux l1 l2 = match l1,l2 with
-  | ([],[]) -> true
-  | ([],x::q) -> false
-  | (x::q,[]) -> false
-  | (x1::q1, x2::q2) -> if (x1=x2) then liste_egaux q1 q2 else false;;
-
 (*Fonction qui prend le noeud d'ABRC et la liste des etiquetes comme argument. Fonction cherche la valeur associé aux etiquetes
   passées en parametre. Si elle trouve la valeur elle le retourne sinon elle retourne -1*)
 let get_value_etiq abrc liste_etiq =
   match abrc with
   | EmptyABRC -> raise Not_found
   |  NodeABRC(x,(refL,etL),(refR,etR))->
-    let rec aux l =
-      match l with
-      | [] -> -1
-      | x::q -> if (liste_egaux (snd x) liste_etiq) then fst x else aux q
-    in aux x;;
+    try
+      find liste_etiq x
+    with
+    | Not_found -> -1;;
 
 (*Insertion d'une valeur dans ABRC. Foncton prend la valeur, la reference vers noeud ou elle doit etre inséré
   et ABRC comme parametres. Elle parcours ABRC en sauvegardant tous les etiquetes par laquelle elle est passée (variable etiquettesVisitees).
@@ -233,7 +238,7 @@ let insert_abrc_etiq v reference abrc =
               refR:=(aux !refR (if etR =0 then etiquettesVisitees else List.append etiquettesVisitees [etR]));
               NodeABRC(x, (refL, etL), (refR, etR))))
         else
-          (NodeABRC (insert_ordered_list (v,etiquettesVisitees) x, (refL,etL),(refR,etR)))
+          (NodeABRC (add etiquettesVisitees v x, (refL,etL),(refR,etR)))
     in aux abrc [];;
 
 (*Insertion d'un ensemble des valeurs dans ABRC (avec la creation des etiquettes)*)
@@ -275,21 +280,15 @@ let compresse_abr_listes abr =
 let arbre_compress = compresse_abr_listes (liste_to_arbre [4;2;8;1;3;6;5;9;7])
 
 
-(********************** Question 2.6 ************************)
+(********************** Question 2.8 ************************)
 
 (*Recherche d'un element dans ABRC. Retourne true or false*)
 let recherche v arb =
-  let rec recherche_liste v lst lst_arretes_rouges= (*compare v aux valeurs dans le noeud, en tenant compte des etiq.*)
-    match lst with
-    |[]->raise Not_found
-    |h::t when liste_egaux (snd h) lst_arretes_rouges ->
-      if (fst h)=v then 0        (*egal*)
-      else if (fst h)>v  then -1 (*elt avec ces etiquettes est plus petit que v*)
-      else 1                     (*elt avec ces etiquettes est plus grand que v*)
-    |h::t->recherche_liste v t lst_arretes_rouges;
-  in
   let rec aux_rech v arb lst_arretes_rouges =
-    let compare v x = recherche_liste v x lst_arretes_rouges in
+    let compare v x =
+      let valeur = find lst_arretes_rouges x in
+      if(valeur=v) then 0 else (if (valeur>v) then -1 else 1)
+    in
     match arb with
     | EmptyABRC -> false
     | NodeABRC(x,(refL,etL),(refR,etR)) when compare v x =0->true (*trouve*)
@@ -300,7 +299,8 @@ let recherche v arb =
     | NodeABRC(_,_,_) -> failwith "Should not occure"
   in aux_rech v arb [];;
 
-recherche 6 arbre_compress;;
+recherche 7 arbre_compress;;
+
 
 
 (************************* Question 3.1 ************************)
@@ -320,4 +320,4 @@ let space f =
     (int_of_float (a1-.a +. b1-.b +. c1-.c));
   res;;
 
-  space (fun () -> compresse_abr_listes (liste_to_arbre (gen_permutation 500)));;
+space (fun () -> compresse_abr_listes (liste_to_arbre (gen_permutation 500)));;
